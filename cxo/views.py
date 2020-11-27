@@ -1,15 +1,14 @@
-from django.shortcuts import render
 from rest_framework.response import Response
 from rest_framework import generics
 from rest_framework import status
 from .serializers import UserSerializer, RegisterSerializer
 from django.contrib.auth.models import User
 from rest_framework.generics import ListAPIView, CreateAPIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated , IsAdminUser, AllowAny
 from django.contrib.auth.models import Group
 from rest_framework.views import APIView
-from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth import get_user_model
 
 
 class RegisterAPI(generics.GenericAPIView):
@@ -23,6 +22,8 @@ class RegisterAPI(generics.GenericAPIView):
             "user": UserSerializer(user, context=self.get_serializer_context()).data,
             "message": "User Created Successfully.  Now perform Login to get your token",
         })
+
+User = get_user_model()
 
 
 def genMissingErros(dct, values):
@@ -63,7 +64,7 @@ class CreateUser(CreateAPIView):
     """
     Create Users on whether the request came from Student, Teacher, Admin
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     allowed_methods = ["POST"]
 
     def create(self, request, *args, **kwargs):
@@ -113,8 +114,7 @@ class ChangePassword(APIView):
         token = request.data["token"]
         pk = request.session.get(token, None)
         if pk is None:
-            return Response({"error":"Token not valid"},
-            status=status.HTTP_406_NOT_ACCEPTABLE)
+            return Response({"error":"Token not valid"}, status=status.HTTP_406_NOT_ACCEPTABLE)
         user = User.objects.get(pk=pk)
         user.set_password(request.data["new_password"])
         del request.session[token]
